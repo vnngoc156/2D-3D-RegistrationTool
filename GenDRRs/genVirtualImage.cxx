@@ -570,12 +570,12 @@ int main(int argc, char *argv[]){
 
 	std::cout << "2D plane origin: ------------- " << origin[0] << ", " << origin[1] << ", " << origin[2] << std::endl;
 	
-	// Test
-	HelperRot helperRotTest;
-	helperRotTest.initRotX(dtr * (90));
-	helperRotTest.initRotY(dtr * (45));
-	helperRotTest.initRotZ(dtr * (0));
-	helperRotTest.composeMatrixRot();
+	//// Ngoc Test
+	//HelperRot helperRotTest;
+	//helperRotTest.initRotX(dtr * (90));
+	//helperRotTest.initRotY(dtr * (45));
+	//helperRotTest.initRotZ(dtr * (0));
+	//helperRotTest.composeMatrixRot();
 
 	//set identity in direction cosine
 	const OutputImageType::DirectionType ctVolumeDirection = image->GetDirection();

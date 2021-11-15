@@ -3,8 +3,8 @@
 #endif
 
 #include <itkCommand.h>
-#include <itkEuler3DTransform.h>
-//#include <itkSimilarity3DTransform.h>
+// #include <itkEuler3DTransform.h>
+#include <itkSimilarity3DTransform.h>
 
 #include "itkFRPROptimizer_opt.h"
 //#include "itkVersorRigid3DTransformOptimizer.h"
@@ -142,7 +142,8 @@ public:
                 std::to_string(optimizer->GetCurrentPosition()[2]) + " " +
                 std::to_string(optimizer->GetCurrentPosition()[3]) + " " +
                 std::to_string(optimizer->GetCurrentPosition()[4]) + " " +
-                std::to_string(optimizer->GetCurrentPosition()[5]) + "\n";
+                std::to_string(optimizer->GetCurrentPosition()[5]) + " " +
+                std::to_string(optimizer->GetCurrentPosition()[6]) + "\n";
             logOptimizer->write(logoptimizer.c_str(),logoptimizer.size());
             std::cout << logoptimizer << std::endl;
         }
@@ -358,13 +359,13 @@ int main(int argc, char* argv[] )
     //----------------------------------------------------------------------------
     // Create the transform
     //----------------------------------------------------------------------------
-    // typedef itk::Similarity3DTransform< double> TransformType;
-    typedef itk::Euler3DTransform<double> TransformType;
+    typedef itk::Similarity3DTransform< double> TransformType;
+    // typedef itk::Euler3DTransform<double> TransformType;
 
     TransformType::Pointer transform = TransformType::New();
     TransformType::Pointer initialTransform = TransformType::New();
 
-    transform->SetComputeZYX(true);
+    //transform->SetComputeZYX(true);
     transform->SetIdentity();
 
     //TransformType::ScaleType scale = 1.0;
@@ -516,7 +517,7 @@ int main(int argc, char* argv[] )
     scales[3] = 1.0/scaTra;
     scales[4] = 1.0/scaTra;
     scales[5] = 1.0/scaTra;
-    // scales[6] = 1.0/scaSca;
+    scales[6] = 1.0/scaSca;
 
     optimizer->SetScales( scales );
 
@@ -740,10 +741,9 @@ int main(int argc, char* argv[] )
 
         //the transformation file has a specify format
         std::string className = baseTransform->GetNameOfClass();
-        // if( className.compare("Similarity3DTransform") != 0 )
-        if (className.compare("Euler3DTransform") != 0)
+        if( className.compare("Similarity3DTransform") != 0 )
         {
-            std::cerr << "Transform class must be Euler3DTransform." << std::endl;
+            std::cerr << "Transform class must be Similarity3DTransform." << std::endl;
             std::cerr << "Found " << className << " instead."
                       << std::endl;
             return EXIT_FAILURE;
