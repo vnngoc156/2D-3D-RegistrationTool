@@ -174,7 +174,7 @@ namespace itk
 } // end namespace itk
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkNormalizedGradientCorrelationImageToImageMetric.txx"
+#include "itkNormalizedGradientCorrelationImageToImageMetric.cxx"
 #endif
 
 #endif

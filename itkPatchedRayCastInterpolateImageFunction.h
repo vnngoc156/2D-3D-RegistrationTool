@@ -193,8 +193,8 @@ protected:
   /// Transformation used to calculate the new focal point position
   TransformPointer m_Transform;
 
-/// New Direction Volume according to Fixed Direction
-DirectionFixedType m_DirectionFixed;
+  /// New Direction Volume according to Fixed Direction
+  DirectionFixedType m_DirectionFixed;
  
   /// The focal point or position of the ray source
   InputPointType m_FocalPoint;
@@ -217,7 +217,7 @@ private:
 } // namespace itk
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkPatchedRayCastInterpolateImageFunction.txx"
+#include "itkPatchedRayCastInterpolateImageFunction.cxx"
 #endif
 
 #endif

@@ -3,8 +3,8 @@
 #endif
 
 #include <itkCommand.h>
-//#include <itkEuler3DTransform.h>
-#include <itkSimilarity3DTransform.h>
+#include <itkEuler3DTransform.h>
+//#include <itkSimilarity3DTransform.h>
 
 #include "itkFRPROptimizer_opt.h"
 //#include "itkVersorRigid3DTransformOptimizer.h"
@@ -136,16 +136,14 @@ public:
                   optimizer->GetCurrentCost() << std::endl;*/
 
             logoptimizer = "Iteration: " + std::to_string(optimizer->GetCurrentIteration()) + " "
-                    + "Similarity: " + std::to_string(optimizer->GetValue()) + " "
-                    + "Position: " + std::to_string(optimizer->GetCurrentPosition()[0]) + " " +
-                    std::to_string(optimizer->GetCurrentPosition()[1]) + " " +
-                    std::to_string(optimizer->GetCurrentPosition()[2]) + " " +
-                    std::to_string(optimizer->GetCurrentPosition()[3]) + " " +
-                    std::to_string(optimizer->GetCurrentPosition()[4]) + " " +
-                    std::to_string(optimizer->GetCurrentPosition()[5]) + " " +
-                    std::to_string(optimizer->GetCurrentPosition()[6]) + "\n";
+                + "Similarity: " + std::to_string(optimizer->GetValue()) + " "
+                + "Position: " + std::to_string(optimizer->GetCurrentPosition()[0]) + " " +
+                std::to_string(optimizer->GetCurrentPosition()[1]) + " " +
+                std::to_string(optimizer->GetCurrentPosition()[2]) + " " +
+                std::to_string(optimizer->GetCurrentPosition()[3]) + " " +
+                std::to_string(optimizer->GetCurrentPosition()[4]) + " " +
+                std::to_string(optimizer->GetCurrentPosition()[5]) + "\n";
             logOptimizer->write(logoptimizer.c_str(),logoptimizer.size());
-            //std::cout << " Similarity: " << optimizer->GetValue() << std::endl;
             std::cout << logoptimizer << std::endl;
         }
         else if( itk::StartEvent().CheckEvent( & event ) )
@@ -360,12 +358,13 @@ int main(int argc, char* argv[] )
     //----------------------------------------------------------------------------
     // Create the transform
     //----------------------------------------------------------------------------
-    typedef itk::Similarity3DTransform< double> TransformType;
+    // typedef itk::Similarity3DTransform< double> TransformType;
+    typedef itk::Euler3DTransform<double> TransformType;
 
     TransformType::Pointer transform = TransformType::New();
     TransformType::Pointer initialTransform = TransformType::New();
 
-    //transform->SetComputeZYX(true);
+    transform->SetComputeZYX(true);
     transform->SetIdentity();
 
     //TransformType::ScaleType scale = 1.0;
@@ -415,7 +414,9 @@ int main(int argc, char* argv[] )
     argc--;
     argv++;
 
-    float vfocalPoint[FImgTotal][3];
+        
+    //float vfocalPoint[FImgTotal][3];
+    std::vector<std::vector<float>> vfocalPoint(FImgTotal);
 
     //for every fixed image
     for( unsigned int f=0; f<FImgTotal; f++ )
@@ -444,14 +445,15 @@ int main(int argc, char* argv[] )
 
         InterpolatorType::Pointer interpolator = InterpolatorType::New();
         FocalPointType focalPoint;
-
+                
+        vfocalPoint[f] = { 0, 0, 0 };
         vfocalPoint[f][0] = focalPoint[0] = fp[f][0];
         vfocalPoint[f][1] = focalPoint[1] = fp[f][1];
         vfocalPoint[f][2] = focalPoint[2] = fp[f][2];
 
         interpolator->SetFocalPoint( focalPoint );
         interpolator->SetTransform( transform );
-        interpolator->SetThreshold( 100.0 );
+        interpolator->SetThreshold( -500.0 );
 
 
         /* Fijando al interpolador la nueva direccion para el volumen acorde a la direccion de la imagen fija*/
@@ -514,7 +516,7 @@ int main(int argc, char* argv[] )
     scales[3] = 1.0/scaTra;
     scales[4] = 1.0/scaTra;
     scales[5] = 1.0/scaTra;
-    scales[6] = 1.0/scaSca;
+    // scales[6] = 1.0/scaSca;
 
     optimizer->SetScales( scales );
 
@@ -525,8 +527,10 @@ int main(int argc, char* argv[] )
     //optimizer->SetNumberOfIterations(2500);
 
     optimizer->SetMaximumIteration( 1000 ); //100
-    int maxlineiter = 10;
-    double  valueTolerance = 1e-6;
+    /*int maxlineiter = 10;
+    double  valueTolerance = 1e-6;    */
+    int maxlineiter = 4;
+    double  valueTolerance = 1e-3;
     optimizer->SetMaximumLineIteration(maxlineiter); //10 - 4
     optimizer->SetValueTolerance( valueTolerance );
     optimizer->SetUseUnitLengthGradient( true );
@@ -724,7 +728,7 @@ int main(int argc, char* argv[] )
             return EXIT_FAILURE;
         }
 
-        itk::TransformFileReader::TransformListType* transformList = transformReader->GetTransformList();
+        const itk::TransformFileReader::TransformListType* transformList = transformReader->GetTransformList();
 
         if( transformList->size() > 1 )
         {
@@ -736,9 +740,10 @@ int main(int argc, char* argv[] )
 
         //the transformation file has a specify format
         std::string className = baseTransform->GetNameOfClass();
-        if( className.compare("Similarity3DTransform") != 0 )
+        // if( className.compare("Similarity3DTransform") != 0 )
+        if (className.compare("Euler3DTransform") != 0)
         {
-            std::cerr << "Transform class must be Similarity3DTransform." << std::endl;
+            std::cerr << "Transform class must be Euler3DTransform." << std::endl;
             std::cerr << "Found " << className << " instead."
                       << std::endl;
             return EXIT_FAILURE;
@@ -746,6 +751,7 @@ int main(int argc, char* argv[] )
         //get separated paremters as fixed paremeters as normal parameters
         transform->SetFixedParameters( baseTransform->GetFixedParameters() );
         transform->SetParameters( baseTransform->GetParameters() );
+        std::cout << "Initial Transform Parameters: " << baseTransform->GetParameters() << std::endl;
     }
 
     //this will be the initial parameters
@@ -803,12 +809,15 @@ int main(int argc, char* argv[] )
         registration->Update();
         timer.Stop("Tiempo de Registro");
         //logregistro << 	"Total Registration time " << cputimer.GetMean() << " mean.\n"<< std::endl;
-        //logregistro << "TotalTime Process Object: "<< registration->GetMTime() << std::endl;
-        //logregistro <<  "TimeTransform: " << transform->GetMTime() << std::endl;
-        //logregistro << "TimeMetric: "<< multiMetric->GetMTime() << std::endl;
-        //logregistro << "TimeOptmizer: " << optimizer->GetMTime() << std::endl;
+        logregistro << "TotalTime Process Object: "<< registration->GetMTime() << std::endl;
+        logregistro <<  "TimeTransform: " << transform->GetMTime() << std::endl;
+        logregistro << "TimeMetric: "<< multiMetric->GetMTime() << std::endl;
+        logregistro << "TimeOptmizer: " << optimizer->GetMTime() << std::endl;
         //std::cout << "CPU Registration took " << cputimer.GetMean() << " mean.\n"<< std::endl;
-        //std::cout << "TotalTime Process Object: "<< registration->GetMTime() << std::endl;
+        std::cout << "TotalTime Process Object: "<< registration->GetMTime() << std::endl;
+        std::cout << "TimeTransform: " << transform->GetMTime() << std::endl;
+        std::cout << "TimeMetric: " << multiMetric->GetMTime() << std::endl;
+        std::cout << "TimeOptmizer: " << optimizer->GetMTime() << std::endl;
 
     }
     catch( itk::ExceptionObject & e )
@@ -830,9 +839,9 @@ int main(int argc, char* argv[] )
     //La salida en Euler es en radianes asi que debemos convertir a grados
     //para observar el angulo en grados sexagesimales
 
-    const double RotationAlongX = finalParameters[0]; // Convert radian to degree
-    const double RotationAlongY = finalParameters[1];
-    const double RotationAlongZ = finalParameters[2];
+    const double RotationAlongX = finalParameters[0] * rtd; // Convert radian to degree
+    const double RotationAlongY = finalParameters[1] * rtd;
+    const double RotationAlongZ = finalParameters[2] * rtd;
     const double TranslationAlongX = finalParameters[3];
     const double TranslationAlongY = finalParameters[4];
     const double TranslationAlongZ = finalParameters[5];
@@ -1043,7 +1052,7 @@ int main(int argc, char* argv[] )
             std::cout << e.GetDescription() << std::endl;
         }
 
-        itk::TransformFileReader::TransformListType* transformList_2 = transformReader_2->GetTransformList();
+        const itk::TransformFileReader::TransformListType* transformList_2 = transformReader_2->GetTransformList();
         itk::TransformFileReader::TransformPointer baseTransform_2 = transformList_2->front();
 
         std::cout<<"Parameters Deformed Volume Transform"<<std::endl;
@@ -1063,7 +1072,7 @@ int main(int argc, char* argv[] )
             std::cout << e.GetDescription() << std::endl;
         }
 
-        itk::TransformFileReader::TransformListType* transformList = transformReader->GetTransformList();
+        const itk::TransformFileReader::TransformListType* transformList = transformReader->GetTransformList();
         itk::TransformFileReader::TransformPointer baseTransform = transformList->front();
 
         std::cout<<"Current Parameters Transform"<<std::endl;

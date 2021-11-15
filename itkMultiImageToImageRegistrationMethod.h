@@ -197,7 +197,8 @@ namespace itk
 
 			/** Method to return the latest modified time of this object or
 			 * any of its cached ivars */
-			unsigned long GetMTime() const;
+			//unsigned long GetMTime() const;
+			ModifiedTimeType GetMTime() const;
 
 		protected:
 			MultiImageToImageRegistrationMethod();
@@ -241,7 +242,7 @@ namespace itk
 
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkMultiImageToImageRegistrationMethod.txx"
+#include "itkMultiImageToImageRegistrationMethod.cxx"
 #endif
 
 #endif

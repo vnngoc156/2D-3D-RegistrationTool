@@ -7,6 +7,7 @@
 #include "itkResampleImageFilter.h"
 
 #include "itkSimilarity3DTransform.h"
+#include "itkTransformFileWriter.h"
 
 #include "itkRescaleIntensityImageFilter.h"
 #include "itkFlipImageFilter.h"
@@ -407,8 +408,11 @@ int main(int argc, char *argv[]){
 	//Matriz de Rotacion de Dirección Euleriana a pesar de que es de similaridad (Ojo but Works)
 	HelperRot helperRot; 
 	helperRot.initRotX(dtr*(dcx));
+	std::cout << "\n Input direction X: \n" << helperRot.getRotx() << std::endl;
 	helperRot.initRotY(dtr*(dcy));
+	std::cout << "\n Input direction Y: \n" << helperRot.getRoty() << std::endl;
 	helperRot.initRotZ(dtr*(dcz));
+	std::cout << "\n Input direction Z: \n" << helperRot.getRotz() << std::endl;
 	helperRot.composeMatrixRot();
 	
 	//Rotacion Normal para el volumen en Versor
@@ -419,11 +423,22 @@ int main(int argc, char *argv[]){
 
 	Utilitarios *util = new Utilitarios();
 	
-	util->convertEulerToVersor(rx,ry,rz,ax,ay,az,angle);		
+	std::cout << std::endl << "Euler rotation: " << rx << " " << ry << " " << rz << std::endl;
+	util->convertEulerToVersor(rx,ry,rz,ax,ay,az,angle);	
+	std::cout << "Rotation-axis & angle: " << ax << " " << ay << " " << az << " " << angle << std::endl;
 	axis[0] = ax; axis[1] = ay; axis[2] = az;
 	rotation.Set(axis, angle);
-	transform->SetRotation(rotation);			
-
+	std::cout << std::endl << "Versor (unit quaternion) (from rotation-axis & angle): " << rotation.GetX() << " " << rotation.GetY() << " " << rotation.GetZ() << " " << rotation.GetW() << std::endl;
+	// Tests
+	float x = rotation.GetX();
+	float y = rotation.GetY();
+	float z = rotation.GetZ();
+	float ox, oy, oz;
+	util->convertVersorToEuler(x, y, z, ox, oy, oz);
+	std::cout << std::endl << "Euler rotation (from Versor): " << ox << " " << oy << " " << oz << std::endl;
+	// End Test
+	transform->SetRotation(rotation);
+	
 	//Escala en Similarity Transform
 	TransformType::ScaleType scale;
 	scale = sg;
@@ -433,9 +448,24 @@ int main(int argc, char *argv[]){
 	TransformType::ParametersType similarityParameters;
 	similarityParameters = transform->GetParameters();
 
+	//// Ngoc
+	//// Write transform out to file
+	//itk::TransformFileWriter::Pointer transformWriter = itk::TransformFileWriter::New();
+	//transformWriter->SetInput(transform);
+	//transformWriter->SetFileName("ctVolumeTransform.txt");
+	//logregistro << "Saving output transform file " << transformWriter->GetFileName() << std::endl;
+	//try
+	//{
+	//	transformWriter->Update();
+	//}
+	//catch (itk::ExceptionObject& e)
+	//{
+	//	std::cout << e.GetDescription() << std::endl;
+	//}
 
 	//Read image properties in case of user don't insert size, spacing origin or isocenter
 	MovingImageType::PointType imOrigin = image->GetOrigin();
+	std::cout << "3D image origin: " << imOrigin << std::endl;
 	MovingImageType::SpacingType imRes = image->GetSpacing();
 
 	typedef MovingImageType::RegionType InputImageRegionType;
@@ -467,7 +497,6 @@ int main(int argc, char *argv[]){
 	}
 
 	
-	
 	//TransformType::InputPointType isocenter;
 	
 	//El centro de la trasnformacion ya no es necesario ya que este va de acuerdo al patched
@@ -492,6 +521,7 @@ int main(int argc, char *argv[]){
 	//Set the focal point in interpolator
 	interpolator->SetFocalPoint(focalPoint);
 	interpolator->SetTransform(transform);
+		
 	
 	//insert the interpolator into the filter
 	filter->SetInterpolator(interpolator);
@@ -523,7 +553,7 @@ int main(int argc, char *argv[]){
 	if(strcmp(type_projection,"AP")==0){
 		// Compute the origin (inmm) of the 2D Image
 		origin[0] = +im_sx * o2Dx;
-		origin[1] = +scd;
+		origin[1] = +scd;         
 		origin[2] = -im_sy * o2Dy;
 	}else if(strcmp(type_projection,"ML")==0){
 		// Compute the origin (inmm) of the 2D Image
@@ -538,17 +568,61 @@ int main(int argc, char *argv[]){
 
 	}
 
+	std::cout << "2D plane origin: ------------- " << origin[0] << ", " << origin[1] << ", " << origin[2] << std::endl;
+	
+	// Test
+	HelperRot helperRotTest;
+	helperRotTest.initRotX(dtr * (90));
+	helperRotTest.initRotY(dtr * (45));
+	helperRotTest.initRotZ(dtr * (0));
+	helperRotTest.composeMatrixRot();
+
 	//set identity in direction cosine
-	const OutputImageType::DirectionType direction = image->GetDirection();
-	const OutputImageType::DirectionType newDirection = direction * helperRot.getRotg();
+	const OutputImageType::DirectionType ctVolumeDirection = image->GetDirection();
+	std::cout << "\nInput image direction: \n" << ctVolumeDirection << std::endl;
+	const OutputImageType::DirectionType newDirection = ctVolumeDirection * helperRot.getRotg();
+	std::cout << "Input direction: \n" << helperRot.getRotg() << std::endl;
+	std::cout << "New image direction: \n" << newDirection << std::endl;
 	filter->SetOutputDirection(newDirection);
+
+	// ctVolumeDirection
+	// -1  0  0
+	//  0 -1  0
+	//  0  0  1
+
+	// Input direction (helperRot.getRotg())
+	// 1  0  0
+	// 0  0 -1
+	// 0  1  0
+
+	// AP's newDirection = ctVolumeDirection * helperRot.getRotg()
+	// -1  0  0
+	//  0  0  1
+	//  0  1  0
+
+
+	// LAT's newDirection
+	//  0  0  -1
+	// -1  0   0
+	//  0  1   0
+	//  X  Y   Z
+
+	/*float a = im_sx * o2Dx;
+	float b = im_sy * o2Dy;
+	origin[0] = newDirection[0][2] * scd - newDirection[0][1] * a - newDirection[0][0] * b;
+	origin[1] = newDirection[1][2] * scd - newDirection[1][1] * a - newDirection[1][0] * b;
+	origin[2] = newDirection[2][2] * scd - newDirection[2][1] * a - newDirection[2][0] * b;
+	std::cout << "2D plane origin: ------------- " << origin[0] << ", " << origin[1] << ", " << origin[2] << std::endl;*/
 	
 	//Set properties of the virtual image
 	filter->SetSize(size);
 	filter->SetOutputSpacing(spacing);
 	filter->SetOutputOrigin(origin);
 
-	//transform in the filter
+	//transform in the filter (this is to rotate and translate the output image)
+	// for lat, rotation is about ox
+	// for ap, rotation is about oy
+	// but should this transform be applied to the 3d volume only?
 	filter->SetTransform(transform);
 
 	//Virtual Image Properties information
@@ -562,14 +636,14 @@ int main(int argc, char *argv[]){
 		logregistro << "Output image spacing: " << spacing[0] << ", " << spacing[1] << ", " << spacing[2] << std::endl;
 		logregistro << "Output image origin: "<< origin[0] << ", " << origin[1] << ", " << origin[2] << std::endl;
 		logregistro << "Focal point image: "<< focalPoint[0] << ", " << focalPoint[1] << ", " << focalPoint[2] << std::endl;
-		//std::cout << "Rotation: " << rx << ", " << ry << ", " << rz << std::endl;
-		//std::cout << "Versor: "<< similarityParameters[0] << ", " << similarityParameters[1] << ", "<< similarityParameters[2] << std::endl;
-		//std::cout << "Traslation: " << similarityParameters[3] << ", " << similarityParameters[4] << ", " << similarityParameters[5] << std::endl;
-		//std::cout << "Scale " << similarityParameters[6] << std::endl;
-		//std::cout << "Output image size: " << size[0] << ", " << size[1] << ", " << size[2] << std::endl;
-		//std::cout << "Output image spacing: " << spacing[0] << ", " << spacing[1] << ", " << spacing[2] << std::endl;
-		//std::cout << "Output image origin: "<< origin[0] << ", " << origin[1] << ", " << origin[2] << std::endl;
-		//std::cout << "Focal point image: "<< focalPoint[0] << ", " << focalPoint[1] << ", " << focalPoint[2] << std::endl;
+		std::cout << "Rotation: " << rx << ", " << ry << ", " << rz << std::endl;
+		std::cout << "Versor: "<< similarityParameters[0] << ", " << similarityParameters[1] << ", "<< similarityParameters[2] << std::endl;
+		std::cout << "Traslation: " << similarityParameters[3] << ", " << similarityParameters[4] << ", " << similarityParameters[5] << std::endl;
+		std::cout << "Scale " << similarityParameters[6] << std::endl;
+		std::cout << "Output image size: " << size[0] << ", " << size[1] << ", " << size[2] << std::endl;
+		std::cout << "Output image spacing: " << spacing[0] << ", " << spacing[1] << ", " << spacing[2] << std::endl;
+		std::cout << "Output image origin: "<< origin[0] << ", " << origin[1] << ", " << origin[2] << std::endl;
+		std::cout << "Focal point image: "<< focalPoint[0] << ", " << focalPoint[1] << ", " << focalPoint[2] << std::endl;
 
 	}
 
@@ -613,10 +687,12 @@ int main(int argc, char *argv[]){
 		writer->SetFileName( fname.c_str() );
 		//writer->SetInput(dynamic_cast<const MovingImageType *>(filter->GetOutput()));
 		writer->SetInput(rescaler->GetOutput());
-
+		//std::cout  << "test: " << rescaler->GetOutput()->Print() << std::endl;
+		rescaler->GetOutput()->Print(std::cout);
 		try{
 			std::cout << "Writing Virtual Image" << fname.c_str() << std::endl;
 			writer->Update();
+
 		}catch( itk::ExceptionObject & err ) 
 		{ 
 			std::cerr << "ERROR: ExceptionObject caught !" << std::endl; 

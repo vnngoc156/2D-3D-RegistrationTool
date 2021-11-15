@@ -249,7 +249,7 @@ namespace itk
 } //namespace itk
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkMultiImageToImageMetric.txx"
+#include "itkMultiImageToImageMetric.cxx"
 #endif
 
 #endif

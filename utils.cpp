@@ -14,6 +14,12 @@ void Utilitarios::round2Decimals(float &number){
 	number = ceil(number*100)/100;
 }
 
+
+/*
+Versor = unit quaternion = rotation only (can be defined by rotation-axis + angle) (sqrt(x*x + y*y + z*z + w*w) = 1)
+Quaternion = rotation + scale (ref: https://itk.org/Doxygen/html/classitk_1_1Versor.html)
+More info about quaternion: http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-17-quaternions/
+*/
 void Utilitarios::convertEulerToVersor(float &rx, float &ry, float &rz, double &ax, double &ay, double &az, double &angle){
 
 	const double dtr = (atan(1.0) * 4.0)/180.0;
@@ -29,9 +35,14 @@ void Utilitarios::convertEulerToVersor(float &rx, float &ry, float &rz, double &
 	double s3 = sin(rz*dtr/2);
 
 	double aw = c1*c2*c3 + s1*s2*s3;//cambio de signo
-	ax = c1*c2*s3 - s1*s2*c3;//cambio de signo
-	ay = s1*c2*c3 + c1*s2*s3;
-	az = c1*s2*c3 - s1*c2*s3;
+	// Original code
+	//ax = c1*c2*s3 - s1*s2*c3;//cambio de signo
+	//ay = s1*c2*c3 + c1*s2*s3;
+	//az = c1*s2*c3 - s1*c2*s3;
+	// Ngoc
+	az = c1*c2*s3 - s1*s2*c3;//cambio de signo
+	ax = s1*c2*c3 + c1*s2*s3;
+	ay = c1*s2*c3 - s1*c2*s3;
 
 	angle = 2*acos(aw);
 	double norm = ax*ax+ay*ay+az*az;
@@ -97,16 +108,25 @@ void Utilitarios::convertVersorToEuler(float &vx, float &vy, float &vz, float &r
 
 	double t0 = +2.0 * (w * vx + vy * vz);
 	double t1 = +1.0 - 2.0 * (vx * vx + vy * vy);
-	rz = atan2(t0, t1);
+	// Original code
+	// rz = atan2(t0, t1);
+	// Ngoc
+	rx = atan2(t0, t1);
 
 	double t2 = +2.0 * (w * vy - vz * vx);
 	t2 = (t2 > +1.0) ? +1.0 : t2;
 	t2 = (t2 < -1.0) ? -1.0 : t2;
-	rx = asin(t2);
+	// Original code
+	// rx = asin(t2);
+	// Ngoc
+	ry = asin(t2);
 
 	double t3 = +2.0 * (w * vz + vx * vy);
 	double t4 = +1.0 - 2.0 * (vy * vy + vz * vz);
-	ry = atan2(t3,t4);
+	// Original code
+	// ry = atan2(t3,t4);
+	// Ngoc
+	rz = atan2(t3, t4);
 
 	//convert radians to degrees
 	rx = rx * rtd;
@@ -377,7 +397,7 @@ void Utilitarios::createStatsOfErrors(int numImags){
 	const int max_buffer = 6;
 	char buffer[max_buffer];
 	command.append(" 2>&1");
-	stream = popen(command.c_str(),"r");
+	stream = _popen(command.c_str(),"r");
 	if(stream && fgets(buffer,max_buffer,stream) != NULL){
 		maxRange.append(buffer);
 	}
